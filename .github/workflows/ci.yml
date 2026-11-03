@@ -1,0 +1,38 @@
+name: ci
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check branch name follows convention
+        if: github.event_name == 'pull_request'
+        run: |
+          BR="${{ github.head_ref }}"
+          echo "Branch: $BR"
+          [[ "$BR" =~ ^(feature|fix|hotfix|docs|test|chore|ci)/[0-9]+-[a-z0-9-]+$ ]] || { echo "Branch name must be <type>/<issue#>-<short-desc>"; exit 1; }
+      - name: Check required SCM files exist
+        run: |
+          for f in README.md CONTRIBUTING.md CHANGELOG.md .github/pull_request_template.md; do
+            test -f "$f" || { echo "Missing $f"; exit 1; }
+          done
+      - name: Set up JDK
+        if: hashFiles('gradlew') != ''
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Lint, unit tests and debug build
+        if: hashFiles('gradlew') != ''
+        run: ./gradlew lint testDebugUnitTest assembleDebug
+      - name: Dependency review
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
