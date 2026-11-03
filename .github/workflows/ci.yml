@@ -31,3 +31,9 @@ jobs:
       - name: Lint, unit tests and debug build
         if: hashFiles('gradlew') != ''
         run: ./gradlew lint testDebugUnitTest assembleDebug
+
+      - name: Dependency review
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
